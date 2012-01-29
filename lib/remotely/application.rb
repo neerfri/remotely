@@ -4,6 +4,10 @@ module Remotely
 
     def initialize(name, &block)
       @name = name
+      @connection_setup = Proc.new do |b|
+        b.request :url_encoded
+        b.adapter :net_http
+      end
       instance_eval(&block)
     end
 
@@ -26,15 +30,22 @@ module Remotely
       @basic_auth = [user, password]
     end
 
+    # Set or get Faraday connection setup block.
+    #
+    # @yield [builder] A block that will be used when initializing faraday connection
+    # @yieldparam [builder] The Faraday builder object
+    #
+    def connection_setup(&block)
+      return @connection_setup unless block
+      @connection_setup = block
+    end
+
     # Connection to the application (with BasicAuth if it was set).
     #
     def connection
       return unless @url
 
-      @connection ||= Faraday::Connection.new(@url) do |b|
-        b.request :url_encoded
-        b.adapter :net_http
-      end
+      @connection ||= Faraday::Connection.new(@url, &connection_setup)
 
       @connection.basic_auth(*@basic_auth) if @basic_auth
       @connection

@@ -16,6 +16,22 @@ describe Remotely::Application do
     app.basic_auth.should == ["user", "pass"]
   end
 
+  it "sets connection_setup block" do
+    block = lambda {|b| b.adapter :net_http }
+    app = Remotely::Application.new(:name) do 
+      connection_setup(&block)
+    end
+    app.connection_setup.should == block
+  end
+
+  it "defaults connection_setup to url_encoded over net_http" do
+    app = Remotely::Application.new(:name) { }
+    builder = mock("builder")
+    builder.should_receive(:request).with(:url_encoded)
+    builder.should_receive(:adapter).with(:net_http)
+    app.connection_setup.call(builder)
+  end
+
   it "has a connection to the app" do
     app = Remotely::Application.new(:name) { url "http://example.com" }
     app.connection.should be_a Faraday::Connection
@@ -28,4 +44,5 @@ describe Remotely::Application do
     end
     app.connection.headers["authorization"].should_not be_nil
   end
+
 end
